@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reequilibrio Cartera ETFs</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 20px;
+      max-width: 1100px;
+    }
+    h1, h2 {
+      margin-bottom: 0.3rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background: #f3f3f3;
+    }
+    input[type="number"], input[type="date"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px;
+    }
+    .small {
+      font-size: 0.8rem;
+      color: #555;
+    }
+    .status-ok {
+      color: #0a7b25;
+      font-weight: 600;
+    }
+    .status-under {
+      color: #e67e22;
+      font-weight: 600;
+    }
+    .status-over {
+      color: #c0392b;
+      font-weight: 600;
+    }
+    .row-ok {
+      background: #eaf8ec;
+    }
+    .row-under {
+      background: #fff4e0;
+    }
+    .row-over {
+      background: #ffe6e6;
+    }
+    .totals {
+      margin: 0.5rem 0;
+      font-weight: 600;
+    }
+    button {
+      padding: 8px 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .note {
+      font-size: 0.8rem;
+      text-align: left;
+    }
+    #summaryBox {
+      border: 1px solid #ccc;
+      padding: 10px;
+      background: #f9f9f9;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    #summaryTitle {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    ul {
+      margin: 0.2rem 0 0.2rem 1.2rem;
+      padding: 0;
+    }
+    /* Mini-gráficos de barras */
+    .bar-container {
+      width: 100%;
+      height: 12px;
+      background: #eee;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .bar-fill-ok {
+      background: #4caf50;
+    }
+    .bar-fill-under {
+      background: #f39c12;
+    }
+    .bar-fill-over {
+      background: #e74c3c;
+    }
+    .bar-target-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #555;
+      opacity: 0.6;
+    }
+    #historyTable td {
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Reequilibrio de Cartera – Plan 12–24 meses</h1>
+
+  <p class="small">
+    Introduce el valor actual e inversión inicial de cada ETF. La app:
+    <br>• Calcula pesos y rentabilidad
+    <br>• Marca en <strong>color</strong> si están dentro del rango, por encima o por debajo
+    <br>• Te sugiere cómo repartir tu aportación mensual
+    <br>• Recuerda tus datos en este dispositivo
+    <br>• Guarda un histórico de revisiones
+    <br>• Muestra mini-gráficos de peso actual por ETF de un solo vistazo
+  </p>
+
+  <div id="summaryBox">
+    <div id="summaryTitle">Resumen de esta revisión:</div>
+    <div id="summaryContent">Pulsa “Recalcular” tras introducir los datos.</div>
+  </div>
+
+  <h2>Parámetros generales</h2>
+  <label>
+    Aportación mensual (€):
+    <input id="monthly" type="number" value="250" step="10">
+  </label>
+  <br><br>
+  <label>
+    Tolerancia (±% alrededor del objetivo):
+    <input id="tolerance" type="number" value="5" step="1">
+  </label>
+  <br><br>
+  <label>
+    Fecha de última revisión:
+    <input id="lastReview" type="date">
+  </label>
+  <p class="totals">
+    Valor total cartera: <span id="totalValue">0,00 €</span><br>
+    Próxima revisión sugerida: <span id="nextReview">–</span>
+  </p>
+
+  <h2>Datos actuales de la cartera</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ETF</th>
+        <th>Inversión inicial (€)</th>
+        <th>Valor actual (€)</th>
+        <th>Rentabilidad %</th>
+        <th>Peso objetivo</th>
+        <th>Peso actual</th>
+        <th>Mini-gráfico peso actual</th>
+        <th>Rango permitido</th>
+        <th>Estado</th>
+        <th>Aportación sugerida (€)</th>
+        <th>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="row-eqqq">
+        <td>EQQQ Nasdaq 100 (ACC)</td>
+        <td><input id="eqqqInitial" type="number" step="10" value="2000"></td>
+        <td><input id="eqqqValue" type="number" step="10" value="2000"></td>
+        <td id="eqqqReturn">–</td>
+        <td>40%</td>
+        <td id="eqqqCurrent">–</td>
+        <td>
+          <div class="bar-container">
+            <div id="bar-eqqq-target" class="bar-target-line"></div>
+            <div id="bar-eqqq" class="bar-fill"></div>
+          </div>
+        </td>
+        <td id="eqqqRange">–</td>
+        <td id="eqqqStatus">–</td>
+        <td id="eqqqAlloc">–</td>
+        <td id="eqqqNote" class="note">–</td>
+      </tr>
+      <tr id="row-spx">
+        <td>Core S&amp;P 500 (ACC)</td>
+        <td><input id="spxInitial" type="number" step="10" value="1000"></td>
+        <td><input id="spxValue" type="number" step="10" value="1000"></td>
+        <td id="spxReturn">–</td>
+        <td>20%</td>
+        <td id="spxCurrent">–</td>
+        <td>
+          <div class="bar-container">
+            <div id="bar-spx-target" class="bar-target-line"></div>
+            <div id="bar-spx" class="bar-fill"></div>
+          </div>
+        </td>
+        <td id="spxRange">–</td>
+        <td id="spxStatus">–</td>
+        <td id="spxAlloc">–</td>
+        <td id="spxNote" class="note">–</td>
+      </tr>
+      <tr id="row-russell">
+        <td>Russell 2000 Small Cap (ACC)</td>
+        <td><input id="russellInitial" type="number" step="10" value="1000"></td>
+        <td><input id="russellValue" type="number" step="10" value="1000"></td>
+        <td id="russellReturn">–</td>
+        <td>20%</td>
+        <td id="russellCurrent">–</td>
+        <td>
+          <div class="bar-container">
+            <div id="bar-russell-target" class="bar-target-line"></div>
+            <div id="bar-russell" class="bar-fill"></div>
+          </div>
+        </td>
+        <td id="russellRange">–</td>
+        <td id="russellStatus">–</td>
+        <td id="russellAlloc">–</td>
+        <td id="russellNote" class="note">–</td>
+      </tr>
+      <tr id="row-em">
+        <td>Core MSCI EM IMI (Emergentes)</td>
+        <td><input id="emInitial" type="number" step="10" value="500"></td>
+        <td><input id="emValue" type="number" step="10" value="500"></td>
+        <td id="emReturn">–</td>
+        <td>10%</td>
+        <td id="emCurrent">–</td>
+        <td>
+          <div class="bar-container">
+            <div id="bar-em-target" class="bar-target-line"></div>
+            <div id="bar-em" class="bar-fill"></div>
+          </div>
+        </td>
+        <td id="emRange">–</td>
+        <td id="emStatus">–</td>
+        <td id="emAlloc">–</td>
+        <td id="emNote" class="note">–</td>
+      </tr>
+      <tr id="row-semi">
+        <td>VanEck Semiconductor (ACC)</td>
+        <td><input id="semiInitial" type="number" step="10" value="500"></td>
+        <td><input id="semiValue" type="number" step="10" value="500"></td>
+        <td id="semiReturn">–</td>
+        <td>10%</td>
+        <td id="semiCurrent">–</td>
+        <td>
+          <div class="bar-container">
+            <div id="bar-semi-target" class="bar-target-line"></div>
+            <div id="bar-semi" class="bar-fill"></div>
+          </div>
+        </td>
+        <td id="semiRange">–</td>
+        <td id="semiStatus">–</td>
+        <td id="semiAlloc">–</td>
+        <td id="semiNote" class="note">–</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <button onclick="recalcular()">Recalcular</button>
+  <button onclick="guardarRevision()" style="margin-left:8px;">Guardar revisión en histórico</button>
+  <button onclick="resetDatos()" style="margin-left:8px;">Resetear datos guardados</button>
+
+  <p class="small">
+    Regla usada para las recomendaciones:
+    <br>• Si un ETF está <strong>sobreponderado</strong> → aportación sugerida = 0 € (“pausar aportación”).
+    <br>• Si hay ETFs <strong>infraponderados</strong> → los fondos se reparten proporcionalmente a cuánto les falta.
+    <br>• Si ninguno está infraponderado → los fondos se reparten según los pesos objetivo.
+  </p>
+
+  <h2>Histórico de revisiones</h2>
+  <p class="small">
+    Cada vez que pulses “Guardar revisión en histórico”, se añadirá una fila con la foto de tu cartera en ese momento.
+  </p>
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Valor total (€)</th>
+        <th>EQQQ</th>
+        <th>S&amp;P 500</th>
+        <th>Russell 2000</th>
+        <th>EM IMI</th>
+        <th>Semiconductores</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Se rellena por JS -->
+    </tbody>
+  </table>
+
+  <script>
+    const STORAGE_KEY = 'miCarteraConfigV2';
+    const HISTORY_KEY = 'miCarteraHistoricoV1';
+
+    function formatearFechaISO(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function guardarEnLocalStorage() {
+      const data = {
+        monthly: document.getElementById('monthly').value,
+        tolerance: document.getElementById('tolerance').value,
+        lastReview: document.getElementById('lastReview').value,
+        etfs: {
+          eqqq: {
+            initial: document.getElementById('eqqqInitial').value,
+            value:   document.getElementById('eqqqValue').value
+          },
+          spx: {
+            initial: document.getElementById('spxInitial').value,
+            value:   document.getElementById('spxValue').value
+          },
+          russell: {
+            initial: document.getElementById('russellInitial').value,
+            value:   document.getElementById('russellValue').value
+          },
+          em: {
+            initial: document.getElementById('emInitial').value,
+            value:   document.getElementById('emValue').value
+          },
+          semi: {
+            initial: document.getElementById('semiInitial').value,
+            value:   document.getElementById('semiValue').value
+          }
+        }
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn('No se pudieron guardar los datos en localStorage:', e);
+      }
+    }
+
+    function cargarDeLocalStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+
+        if (data.monthly)   document.getElementById('monthly').value = data.monthly;
+        if (data.tolerance) document.getElementById('tolerance').value = data.tolerance;
+        if (data.lastReview) document.getElementById('lastReview').value = data.lastReview;
+
+        if (data.etfs) {
+          if (data.etfs.eqqq) {
+            document.getElementById('eqqqInitial').value = data.etfs.eqqq.initial || '';
+            document.getElementById('eqqqValue').value   = data.etfs.eqqq.value   || '';
+          }
+          if (data.etfs.spx) {
+            document.getElementById('spxInitial').value = data.etfs.spx.initial || '';
+            document.getElementById('spxValue').value   = data.etfs.spx.value   || '';
+          }
+          if (data.etfs.russell) {
+            document.getElementById('russellInitial').value = data.etfs.russell.initial || '';
+            document.getElementById('russellValue').value   = data.etfs.russell.value   || '';
+          }
+          if (data.etfs.em) {
+            document.getElementById('emInitial').value = data.etfs.em.initial || '';
+            document.getElementById('emValue').value   = data.etfs.em.value   || '';
+          }
+          if (data.etfs.semi) {
+            document.getElementById('semiInitial').value = data.etfs.semi.initial || '';
+            document.getElementById('semiValue').value   = data.etfs.semi.value   || '';
+          }
+        }
+        return true;
+      } catch (e) {
+        console.warn('No se pudieron cargar los datos de localStorage:', e);
+        return false;
+      }
+    }
+
+    function cargarHistorico() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        return JSON.parse(raw);
+      } catch (e) {
+        console.warn('No se pudo cargar el histórico:', e);
+        return [];
+      }
+    }
+
+    function guardarHistorico(hist) {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+      } catch (e) {
+        console.warn('No se pudo guardar el histórico:', e);
+      }
+    }
+
+    function resetDatos() {
+      if (!confirm('¿Seguro que quieres borrar todos los datos guardados (configuración + histórico)?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(HISTORY_KEY);
+      location.reload();
+    }
+
+    function actualizarBarra(e) {
+      const bar = document.getElementById('bar-' + e.id);
+      const targetLine = document.getElementById('bar-' + e.id + '-target');
+      if (!bar || !targetLine) return;
+
+      // anchura de la barra según peso actual (máx 100%)
+      const width = Math.max(0, Math.min(100, e.currentWeight));
+      bar.style.width = width + '%';
+
+      // posición de la línea de objetivo
+      const container = bar.parentElement;
+      const containerWidth = container.clientWidth || 1;
+      const targetLeft = (e.target / 100) * containerWidth;
+      targetLine.style.left = targetLeft + 'px';
+
+      // color según estado
+      bar.className = 'bar-fill';
+      if (e.status === 'En rango')  bar.classList.add('bar-fill-ok');
+      if (e.status === 'Infraponderado') bar.classList.add('bar-fill-under');
+      if (e.status === 'Sobreponderado') bar.classList.add('bar-fill-over');
+    }
+
+    function recalcular() {
+      const monthly = parseFloat(document.getElementById('monthly').value) || 0;
+      const tol = parseFloat(document.getElementById('tolerance').value) || 5;
+
+      const etfs = [
+        { id: 'eqqq',   inputId: 'eqqqValue',   initialId: 'eqqqInitial',   target: 40, name: 'EQQQ (Nasdaq 100)' },
+        { id: 'spx',    inputId: 'spxValue',    initialId: 'spxInitial',    target: 20, name: 'Core S&P 500' },
+        { id: 'russell',inputId: 'russellValue',initialId: 'russellInitial',target: 20, name: 'Russell 2000 Small Caps' },
+        { id: 'em',     inputId: 'emValue',     initialId: 'emInitial',     target: 10, name: 'Emergentes (EM IMI)' },
+        { id: 'semi',   inputId: 'semiValue',   initialId: 'semiInitial',   target: 10, name: 'VanEck Semiconductores' }
+      ];
+
+      let total = 0;
+      etfs.forEach(e => {
+        const val = parseFloat(document.getElementById(e.inputId).value) || 0;
+        e.value = val;
+        total += val;
+      });
+
+      document.getElementById('totalValue').textContent = total.toFixed(2) + ' €';
+
+      const lastReviewInput = document.getElementById('lastReview').value;
+      if (lastReviewInput) {
+        const d = new Date(lastReviewInput);
+        d.setMonth(d.getMonth() + 3);
+        document.getElementById('nextReview').textContent = d.toLocaleDateString('es-ES');
+      } else {
+        document.getElementById('nextReview').textContent = 'Introduce una fecha de última revisión';
+      }
+
+      let deficitsSum = 0;
+      const summaryMessages = [];
+
+      etfs.forEach(e => {
+        const initial = parseFloat(document.getElementById(e.initialId).value) || 0;
+        let retPct = 0;
+        if (initial > 0) {
+          retPct = (e.value - initial) / initial * 100;
+        }
+        document.getElementById(e.id + 'Return').textContent = initial > 0 ? retPct.toFixed(1) + '%' : '–';
+
+        e.currentWeight = total > 0 ? (e.value / total) * 100 : 0;
+        e.lower = e.target - tol;
+        e.upper = e.target + tol;
+
+        let status;
+        if (e.currentWeight < e.lower) status = 'Infraponderado';
+        else if (e.currentWeight > e.upper) status = 'Sobreponderado';
+        else status = 'En rango';
+
+        e.status = status;
+
+        document.getElementById(e.id + 'Current').textContent = e.currentWeight.toFixed(1) + '%';
+        document.getElementById(e.id + 'Range').textContent = e.lower.toFixed(1) + '% - ' + e.upper.toFixed(1) + '%';
+
+        const statusCell = document.getElementById(e.id + 'Status');
+        const row = document.getElementById('row-' + e.id);
+
+        statusCell.textContent = status;
+        statusCell.className = '';
+        row.className = '';
+
+        if (status === 'Infraponderado') {
+          statusCell.classList.add('status-under');
+          row.classList.add('row-under');
+          summaryMessages.push(`🔶 ${e.name} está por DEBAJO de su peso objetivo. Prioriza aportaciones aquí.`);
+        }
+        if (status === 'Sobreponderado') {
+          statusCell.classList.add('status-over');
+          row.classList.add('row-over');
+          summaryMessages.push(`🔴 ${e.name} está por ENCIMA de su peso objetivo. Pausa aportaciones hasta que vuelva al rango.`);
+        }
+        if (status === 'En rango') {
+          statusCell.classList.add('status-ok');
+          row.classList.add('row-ok');
+        }
+
+        const deficit = Math.max(0, e.target - e.currentWeight);
+        e.deficit = deficit;
+        deficitsSum += deficit;
+
+        // actualizar mini-gráfico
+        actualizarBarra(e);
+      });
+
+      etfs.forEach(e => {
+        let alloc = 0;
+        let note = '';
+
+        if (e.status === 'Sobreponderado') {
+          alloc = 0;
+          note = 'Pausa la aportación hasta que vuelva al rango.';
+        } else if (deficitsSum > 0) {
+          alloc = monthly * (e.deficit / deficitsSum);
+          if (e.status === 'Infraponderado') {
+            note = 'Prioriza este ETF hasta acercarlo al objetivo.';
+          } else {
+            note = 'Aporta aquí solo si los infraponderados ya están cubiertos.';
+          }
+        } else {
+          alloc = monthly * (e.target / 100);
+          note = 'Todos en rango: aporta según el peso objetivo.';
+        }
+
+        document.getElementById(e.id + 'Alloc').textContent = alloc.toFixed(2) + ' €';
+        document.getElementById(e.id + 'Note').textContent = note;
+      });
+
+      const summaryContent = document.getElementById('summaryContent');
+      if (summaryMessages.length === 0) {
+        summaryContent.innerHTML = `
+          ✅ Toda la cartera está dentro de los rangos de tolerancia.<br>
+          • Puedes seguir aportando según los pesos objetivo (40/20/20/10/10).<br>
+          • Próxima revisión en la fecha indicada arriba.`;
+      } else {
+        let html = '<ul>';
+        summaryMessages.forEach(m => {
+          html += `<li>${m}</li>`;
+        });
+        html += '</ul>';
+        html += '<br>Usa la columna de "Aportación sugerida" para repartir tus ' + monthly.toFixed(0) + ' € del mes.';
+        summaryContent.innerHTML = html;
+      }
+
+      guardarEnLocalStorage();
+    }
+
+    function guardarRevision() {
+      const lastReviewInput = document.getElementById('lastReview').value;
+      const fecha = lastReviewInput || formatearFechaISO(new Date());
+
+      const totalText = document.getElementById('totalValue').textContent || '0';
+      const total = parseFloat(totalText.replace('€','')) || 0;
+
+      const hist = cargarHistorico();
+
+      const entry = {
+        date: fecha,
+        total: total,
+        eqqq: parseFloat(document.getElementById('eqqqValue').value) || 0,
+        spx: parseFloat(document.getElementById('spxValue').value) || 0,
+        russell: parseFloat(document.getElementById('russellValue').value) || 0,
+        em: parseFloat(document.getElementById('emValue').value) || 0,
+        semi: parseFloat(document.getElementById('semiValue').value) || 0
+      };
+
+      hist.push(entry);
+      guardarHistorico(hist);
+      renderHistorico(hist);
+      alert('Revisión guardada en el histórico.');
+    }
+
+    function renderHistorico(hist) {
+      const tbody = document.querySelector('#historyTable tbody');
+      tbody.innerHTML = '';
+      hist.forEach(entry => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${entry.date}</td>
+          <td>${entry.total.toFixed(2)} €</td>
+          <td>${entry.eqqq.toFixed(2)} €</td>
+          <td>${entry.spx.toFixed(2)} €</td>
+          <td>${entry.russell.toFixed(2)} €</td>
+          <td>${entry.em.toFixed(2)} €</td>
+          <td>${entry.semi.toFixed(2)} €</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function cargarHistorico() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        return JSON.parse(raw);
+      } catch (e) {
+        console.warn('No se pudo cargar el histórico:', e);
+        return [];
+      }
+    }
+
+    function guardarHistorico(hist) {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+      } catch (e) {
+        console.warn('No se pudo guardar el histórico:', e);
+      }
+    }
+
+    // Inicialización
+    window.addEventListener('load', () => {
+      const cargado = cargarDeLocalStorage();
+      if (!cargado) {
+        const today = new Date();
+        document.getElementById('lastReview').value = formatearFechaISO(today);
+      }
+      recalcular();
+
+      const hist = cargarHistorico();
+      renderHistorico(hist);
+    });
+
+    document.addEventListener('input', (e) => {
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === 'input') {
+        guardarEnLocalStorage();
+      }
+    });
+  </script>
+</body>
+</html>
